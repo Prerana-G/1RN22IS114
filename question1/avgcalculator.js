@@ -1,4 +1,6 @@
 const express = require('express');
+const axios = require('axios');
+
 const app = express();
 const PORT = 9876;
 
@@ -6,20 +8,27 @@ const WINDOW_SIZE = 10;
 const ALLOWED_IDS = ['p', 'f', 'e', 'r'];
 let windowStore = [];
 
-
-const sample = {
-    p: [1, 3, 5, 7],
-    f: [1, 1, 2, 3],
-    e: [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
-    r: [9, 11, 13, 15]
+const API_URLS = {
+    p: 'http://20.244.56.144/evaluation-service/primes',
+    f: 'http://20.244.56.144/evaluation-service/fibo',
+    e: 'http://20.244.56.144/evaluation-service/even',
+    r: 'http://20.244.56.144/evaluation-service/rand'
 };
 
-function fetchnumbers(id) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(sample[id] || []);
-        }, 200);
-    });
+async function fetchNumbers(id) {
+    const url = API_URLS[id];
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 500);
+
+    try {
+        const response = await axios.get(url, { signal: controller.signal });
+        clearTimeout(timeout);
+        return response.data.numbers || [];
+    } catch (error) {
+        clearTimeout(timeout);
+        return [];
+    }
 }
 
 app.get('/numbers/:numberid', async (req, res) => {
@@ -30,15 +39,10 @@ app.get('/numbers/:numberid', async (req, res) => {
     }
 
     const prevState = [...windowStore];
-    const startTime = Date.now();
     let fetchedNumbers = [];
 
     try {
-        fetchedNumbers = await fetchnumbers(id);
-        const duration = Date.now() - startTime;
-        if (duration > 500) {
-            fetchedNumbers = [];
-        }
+        fetchedNumbers = await fetchNumbers(id);
     } catch {
         fetchedNumbers = [];
     }
