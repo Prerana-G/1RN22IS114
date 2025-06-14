@@ -8,6 +8,9 @@ const WINDOW_SIZE = 10;
 const ALLOWED_IDS = ['p', 'f', 'e', 'r'];
 let windowStore = [];
 
+require('dotenv').config();
+const AUTH_TOKEN = process.env.AUTH_TOKEN;
+
 const API_URLS = {
     p: 'http://20.244.56.144/evaluation-service/primes',
     f: 'http://20.244.56.144/evaluation-service/fibo',
@@ -22,11 +25,18 @@ async function fetchNumbers(id) {
     const timeout = setTimeout(() => controller.abort(), 500);
 
     try {
-        const response = await axios.get(url, { signal: controller.signal });
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: `Bearer ${AUTH_TOKEN}`
+            },
+            signal: controller.signal
+        });
+
         clearTimeout(timeout);
         return response.data.numbers || [];
     } catch (error) {
         clearTimeout(timeout);
+        console.error(`Failed to fetch ${id}:`, error.message);
         return [];
     }
 }
